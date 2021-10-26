@@ -1,76 +1,77 @@
 package net.mbmedia.einkaufsliste;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
-
-import com.google.android.material.snackbar.Snackbar;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.ListView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.view.View;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
-
-import net.mbmedia.einkaufsliste.databinding.ActivityMainBinding;
-
-import android.view.Menu;
-import android.view.MenuItem;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private AppBarConfiguration appBarConfiguration;
-    private ActivityMainBinding binding;
+    private FloatingActionButton fab;
+    private ListView listView;
+
+    private List<String> items = new ArrayList<>();
+    private ArrayAdapter<String> arrayAdapter;
+    private Database db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        db = new Database(this);
+        initFloatingActionButton();
+        initListView();
+    }
 
-        setSupportActionBar(binding.toolbar);
-
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
+    private void initListView() {
+        items.clear();
+        items.addAll(db.getAllItems());
+        arrayAdapter = new ArrayAdapter<>(this, R.layout.row, R.id.textView, items);
+        listView = findViewById(R.id.listView);
+        listView.setAdapter(arrayAdapter);
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String s = arrayAdapter.getItem(position);
+            removeItem(s);
         });
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+    private void initFloatingActionButton() {
+        fab = findViewById(R.id.fab);
+        fab.setOnClickListener(v -> showDialog());
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+    private void showDialog() {
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        final EditText edittext = new EditText(this);
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+        alert.setMessage("bitte den Namen angeben");
+        alert.setTitle("Artikel hinzufügen");
+        alert.setView(edittext);
+        alert.setPositiveButton("OK", (dialog, whichButton) -> addItem(edittext.getText().toString()));
+        alert.setNegativeButton("Abbrechen", (dialog, whichButton) -> {
+            //nothing
+        });
+        alert.show();
     }
 
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
+    private void addItem(String item) {
+        items.add(item);
+        db.addItem(item);
+        arrayAdapter.notifyDataSetChanged();
+    }
+
+    private void removeItem(String item) {
+        items.remove(item);
+        db.delItem(item);
+        arrayAdapter.notifyDataSetChanged();
     }
 }
